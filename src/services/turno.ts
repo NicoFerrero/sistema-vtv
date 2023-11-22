@@ -131,7 +131,7 @@ export default class TurnoService {
             }
             if (
                 moment(targetDate, 'hh:mm:ss').hours() > moment(`${fecha} 22:00:00`, 'DD/MM/YYY hh:mm:ss').hours() ||
-                moment(targetDate, 'hh:mm:ss').hours() < moment(`${fecha} 09:00:00`, 'hh:mm:ss').hours()
+                moment(targetDate, 'hh:mm:ss').hours() < moment(`${fecha} 09:00:00`, 'DD/MM/YYY hh:mm:ss').hours()
             ) {
                 return { turno: null, error: `No puede pedir un turno fuera del horario laboral` };
             }
@@ -144,7 +144,7 @@ export default class TurnoService {
         }
     }
 
-    async elimnarTurno(patente: String) {
+    async eliminarTurno(patente: String) {
         const turnosExistentes = await this.obtenerTurnos({ patente, fecha: { $gte: new Date().toLocaleString('es-AR').split(',')[0] } });
         if (turnosExistentes.length < 1) {
             return { turnoBorrado: 0, error: 'No hay ningun turno para la patente ingresada.' };

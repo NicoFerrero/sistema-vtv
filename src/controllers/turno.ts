@@ -30,7 +30,7 @@ export default class TurnoController {
 
     async eliminarTurno(req: Request, res: Response) {
         const patente = req.params.patente;
-        const { turnoBorrado, error } = await this.turnoService.elimnarTurno(patente);
+        const { turnoBorrado, error } = await this.turnoService.eliminarTurno(patente);
         if (turnoBorrado !== 1) return res.status(404).json({ turnoBorrado: null, error });
         return res.status(201).json({ turnoBorrado, error: 'El turno se elimino con exito' });
     }
