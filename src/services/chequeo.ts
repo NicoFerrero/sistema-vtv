@@ -2,6 +2,7 @@ import moment from 'moment';
 import { IChequeo, IPregunta } from '../models/chequeo';
 import IRepository from '../repositories/repository';
 import TurnoService from '../services/turno';
+import { NodeMailer } from './nodemailer';
 
 export default class ChequeoService {
     chequeoRepository: IRepository;
@@ -42,7 +43,15 @@ export default class ChequeoService {
             return { chequeo: null, error: `El chequeo no se pudo realizar` };
         }
         await this.turnoService.modificarTurno({ _id: turnoExistente._id }, { estado: 'COMPLETADO', resultado: puntajeTotal >= 80 ? 'APROBADO' : 'DESAPROBADO' });
+        let texto = `
+            
+            Hola ${turnoExistente.contacto.nombreCompleto}!
 
+            El chequeo de la VTV para el turno del dia ${turnoExistente.fecha} a las ${turnoExistente.horario} fue realizado.
+            El chequeo para la patente ${patente} esta ${chequeoRealizado.estado} con un puntaje de ${chequeoRealizado.puntajeTotal}.
+            
+            ¡Gracias!`;
+        await new NodeMailer().sendEmail(turnoExistente.contacto.email, 'Sistema VTV - Chequeo realizado', texto);
         return { chequeo: chequeoRealizado, error: '' };
     }
 

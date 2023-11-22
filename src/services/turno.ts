@@ -4,6 +4,7 @@ import { IPersona } from '../models/usuario';
 import IRepository from '../repositories/repository';
 //import moment from 'moment-timezone';
 import moment, { Moment } from 'moment';
+import { NodeMailer } from './nodemailer';
 
 export default class TurnoService {
     dataRepository: IRepository;
@@ -137,6 +138,18 @@ export default class TurnoService {
             }
             const turno = { patente, fecha, horario, estado, contacto, resultado: 'PENDIENTE' };
             const turnoCreado = await this.crearTurno(turno);
+            let texto = `
+            
+            Hola ${contacto.nombreCompleto}!
+
+            Se ha creado un turno para el ${turno.fecha} a las ${turno.horario}.
+            Por favor, recorda estar presente a tiempo.
+            
+            DNI: ${contacto.dni}
+            Patente: ${patente}
+            
+            ¡Gracias!`;
+            await new NodeMailer().sendEmail(contacto.email, 'Sistema VTV - Turno Generado', texto);
             return { turno: turnoCreado, error: '' };
         } catch (e) {
             console.log(e);
@@ -149,10 +162,19 @@ export default class TurnoService {
         if (turnosExistentes.length < 1) {
             return { turnoBorrado: 0, error: 'No hay ningun turno para la patente ingresada.' };
         }
-        const resultado = await this.dataRepository.delete('Turno', { patente });
+        const resultado = await this.dataRepository.delete('Turno', { _id: turnosExistentes[0]._id });
         if (resultado.deletedCount !== 1) {
             return { turnoBorrado: resultado.deletedCount, error: `No se pudo borrar el turno de la patente ingresada` };
         }
+        let texto = `
+            
+            Hola ${turnosExistentes[0].contacto.nombreCompleto}!
+
+            Se ha eliminado el turno para el ${turnosExistentes[0].fecha} a las ${turnosExistentes[0].horario}.
+            De ser necesario simepre podras volver a pedir otro turno.
+            
+            ¡Gracias!`;
+        await new NodeMailer().sendEmail(turnosExistentes[0].contacto.email, 'Sistema VTV - Turno Eliminado', texto);
         return { turnoBorrado: resultado.deletedCount, error: `El turno con la patente ${patente} fue borrado con exito` };
     }
 }
