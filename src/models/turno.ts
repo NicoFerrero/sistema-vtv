@@ -7,6 +7,7 @@ export interface ITurno {
     horario: string;
     estado: string;
     contacto: IPersona;
+    resultado: string;
 }
 
 export interface ITurnoModel extends ITurno, Document {
@@ -27,6 +28,7 @@ const turnoSchema: Schema = new Schema(
         patente: { type: String, require: true },
         horario: { type: String, require: true },
         fecha: { type: String, require: true },
+        resultado: { type: String, require: true },
         estado: { type: String, require: true },
         contacto: { type: contactoSchema, require: true }
     },

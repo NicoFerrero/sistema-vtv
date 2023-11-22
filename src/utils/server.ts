@@ -4,6 +4,7 @@ import routes from '../routes';
 //Models
 require('../models/usuario');
 require('../models/turno');
+require('../models/chequeo');
 
 function createServer() {
     const app = express();

@@ -1,5 +1,5 @@
 import { ExecException } from 'child_process';
-import { ITurno, ITurnoModel } from '../models/turno';
+import turno, { ITurno, ITurnoModel } from '../models/turno';
 import { IPersona } from '../models/usuario';
 import IRepository from '../repositories/repository';
 //import moment from 'moment-timezone';
@@ -30,6 +30,16 @@ export default class TurnoService {
     async obtenerTurno(query: {}): Promise<ITurnoModel> {
         const turno = await this.dataRepository.read<ITurnoModel>('Turno', query);
         return turno[0];
+    }
+
+    async modificarTurno(query: {}, data: any) {
+        try {
+            const turno = await this.dataRepository.update<ITurnoModel>('Turno', data as ITurnoModel, query);
+            return turno;
+        } catch (e) {
+            console.log(e);
+            return null;
+        }
     }
 
     async obtenerTurnosLibres(date: string): Promise<{ horarios: Array<string> | null; error: string }> {
@@ -85,23 +95,32 @@ export default class TurnoService {
             const targetDate = moment(`${fecha} ${horario}`, 'DD/MM/YYYY hh/mm/ss');
             if (targetDate.minutes() > 0 && targetDate.minutes() <= 29) {
                 targetDate.minutes(30);
-            } else if (targetDate.minutes() >= 30 && targetDate.minutes() <= 59) {
+            } else if (targetDate.minutes() > 30 && targetDate.minutes() <= 59) {
                 targetDate.minutes(0);
                 targetDate.hours(targetDate.hours() + 1);
             }
-            const turnoExistente = await this.obtenerTurno({ patente });
-            if (turnoExistente && turnoExistente.estado === 'PENDIENTE') {
-                const daysDiff = moment().diff(targetDate, 'days');
-                if (daysDiff < 365) {
-                    return { turno: null, error: 'Ya existe un turno creado para esta patente. Solo puede tener un turno por año.' };
-                }
+            //Siempre trae el ultimo
+            const turnosExistentes = await this.obtenerTurnos({ patente });
+            let puedePedirTurno = true;
+            turnosExistentes
+                .filter((turno) => turno.resultado == 'APROBADO')
+                .forEach((turno) => {
+                    if (targetDate.diff(moment(turno.fecha, 'DD/MM/YYYY'), 'days') < 365) {
+                        puedePedirTurno = false;
+                    }
+                });
+            if (!puedePedirTurno) {
+                return { turno: null, error: `Ustded ya aprobo el chequeo del año.` };
+            }
+            const turnoPendiente = turnosExistentes.filter((turno) => turno.resultado == 'PENDIENTE')[0];
+            if (turnoPendiente) {
+                return { turno: null, error: `Ya existe un turno pendiente creado para esta patente.` };
             }
             const turnoTomado = await this.obtenerTurno({ fecha, horario });
             if (turnoTomado) {
-                console.log(targetDate);
                 return {
                     turno: null,
-                    error: `El turno que intenta solicitar para la fecha ${targetDate.format('DD/MM/YYYY')} y la hora ${targetDate.format('hh:mm:ss')} ya fue tomado. Vuelva a  buscar turnos libres.`
+                    error: `El turno que intenta solicitar para la fecha ${targetDate.format('DD/MM/YYYY')} y la hora ${targetDate.format('HH:mm:ss')} ya fue tomado. Vuelva a  buscar turnos libres.`
                 };
             }
             if (moment().diff(targetDate, 'days') > 0) {
@@ -110,7 +129,13 @@ export default class TurnoService {
             if (moment().diff(moment(targetDate, 'hh:mm:ss'), 'millisecond') > 0) {
                 return { turno: null, error: `No puede pedir un turno para el dia actual en un horario anterior` };
             }
-            const turno = { patente, fecha, horario, estado, contacto };
+            if (
+                moment(targetDate, 'hh:mm:ss').hours() > moment(`${fecha} 22:00:00`, 'DD/MM/YYY hh:mm:ss').hours() ||
+                moment(targetDate, 'hh:mm:ss').hours() < moment(`${fecha} 09:00:00`, 'hh:mm:ss').hours()
+            ) {
+                return { turno: null, error: `No puede pedir un turno fuera del horario laboral` };
+            }
+            const turno = { patente, fecha, horario, estado, contacto, resultado: 'PENDIENTE' };
             const turnoCreado = await this.crearTurno(turno);
             return { turno: turnoCreado, error: '' };
         } catch (e) {

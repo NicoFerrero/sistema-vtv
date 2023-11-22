@@ -15,9 +15,9 @@ export default class MongoService implements IRepository {
         return result;
     }
 
-    async update<T>(modelName: string, id: string, data: T): Promise<T | null> {
+    async update<T>(modelName: string, data: T, query: FilterQuery<T>): Promise<T | null> {
         const model = mongoose.model<T>(modelName);
-        const result = await model.findByIdAndUpdate(id, data as FilterQuery<T>, { new: true });
+        const result = await model.findByIdAndUpdate(query, data as FilterQuery<T>, { new: true });
         return result;
     }
 
