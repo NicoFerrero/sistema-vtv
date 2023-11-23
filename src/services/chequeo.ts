@@ -22,11 +22,17 @@ export default class ChequeoService {
         } else if (turnoExistente && moment(turnoExistente.fecha, 'DD/MM/YYYY').diff(moment(), 'days') !== 0) {
             return { chequeo: null, error: `El chequeo no se puede realizar porque todavia no es la fecha del turno. El turno es el dia ${turnoExistente.fecha}` };
         }
+        let preguntasValidas = true;
+        let preguntaInvalida = ""
         preguntas.forEach((pregunta) => {
-            if (pregunta.puntaje < 0) {
-                return { chequeo: null, error: `La pregunta "${pregunta.pregunta}" tiene asignado un puntaje menor a 0` };
+            if (pregunta.puntaje < 0 || pregunta.puntaje > 10) {
+                preguntasValidas = false
+                preguntaInvalida = pregunta.pregunta
             }
         });
+        if (!preguntasValidas) {
+            return { chequeo: null, error: `La pregunta ${preguntaInvalida} tiene asignado un puntaje menor a 0 o mayor a 10` };
+        }
 
         const puntajeTotal = preguntas.reduce((total, pregunta) => total + pregunta.puntaje, 0);
         const chequeo: IChequeo = {

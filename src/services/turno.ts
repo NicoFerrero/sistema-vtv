@@ -48,7 +48,7 @@ export default class TurnoService {
             // Parse the date received in the body
             const targetDate = moment(date, 'DD/MM/YYYY');
             targetDate.hour(new Date().getHours()).minute(new Date().getMinutes());
-            if (targetDate.date() < new Date().getDate() || targetDate.hours() >= 22) {
+            if (targetDate.date() < moment().date()) {
                 throw Error('No se puede pedir un turno para el dia elegido');
             }
             if (targetDate.minutes() > 0 && targetDate.minutes() <= 29) {
@@ -126,17 +126,17 @@ export default class TurnoService {
             }
             if (moment().diff(targetDate, 'days') > 0) {
                 return { turno: null, error: `No puede pedir un turno para un dia anterior al actual` };
-            }
-            if (moment().diff(moment(targetDate, 'hh:mm:ss'), 'millisecond') > 0) {
+            } else if (moment().diff(moment(targetDate, 'hh:mm:ss'), 'millisecond') > 0) {
                 return { turno: null, error: `No puede pedir un turno para el dia actual en un horario anterior` };
-            }
-            if (
+            } else if (
                 moment(targetDate, 'hh:mm:ss').hours() > moment(`${fecha} 22:00:00`, 'DD/MM/YYY hh:mm:ss').hours() ||
                 moment(targetDate, 'hh:mm:ss').hours() < moment(`${fecha} 09:00:00`, 'DD/MM/YYY hh:mm:ss').hours()
             ) {
                 return { turno: null, error: `No puede pedir un turno fuera del horario laboral` };
             }
-            const turno = { patente, fecha, horario, estado, contacto, resultado: 'PENDIENTE' };
+            let fechaAux = targetDate.toDate().toLocaleString('es-AR').split(",")[0]
+            let horarioAux = targetDate.toDate().toLocaleString('es-AR').split(",")[1].trim()
+            const turno = { patente, fecha: fechaAux, horario: horarioAux, estado, contacto, resultado: 'PENDIENTE' };
             const turnoCreado = await this.crearTurno(turno);
             let texto = `
             
@@ -161,6 +161,9 @@ export default class TurnoService {
         const turnosExistentes = await this.obtenerTurnos({ patente, fecha: { $gte: new Date().toLocaleString('es-AR').split(',')[0] } });
         if (turnosExistentes.length < 1) {
             return { turnoBorrado: 0, error: 'No hay ningun turno para la patente ingresada.' };
+        }
+        if (turnosExistentes[0].estado === "COMPLETADO") {
+            return { turnoBorrado: 0, error: 'No puede borrar un turno que ya fue completado.' };
         }
         const resultado = await this.dataRepository.delete('Turno', { _id: turnosExistentes[0]._id });
         if (resultado.deletedCount !== 1) {
